@@ -6,6 +6,8 @@ venv/
 
 # MLflow local
 mlruns/
+mlflow.db
+*.tsbuildinfo
 
 # dados coletados (ficam no Blob; localmente só para desenvolvimento)
 data/
