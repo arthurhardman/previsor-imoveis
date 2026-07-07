@@ -1,0 +1,53 @@
+# Retreino semanal: baixa os CSVs coletados do Blob, treina, commita o novo modelo.
+# O commit em models/ dispara o deploy-api.yml automaticamente (retreino -> deploy).
+# Secrets necessários: AZURE_CREDENTIALS, STORAGE_ACCOUNT (nome da storage account)
+name: retrain
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # segundas 08:00 UTC, depois da coleta das 06:00
+  workflow_dispatch:
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r training/requirements.txt
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Baixar dados coletados
+        run: |
+          mkdir -p data/raw
+          az storage blob download-batch \
+            --account-name ${{ secrets.STORAGE_ACCOUNT }} \
+            --source dados --pattern "raw/*.csv" \
+            --destination data/ --auth-mode login
+          # Consolida todos os lotes num CSV único
+          python -c "
+          import pandas as pd, glob
+          arquivos = glob.glob('data/raw/*.csv')
+          assert arquivos, 'nenhum dado coletado ainda'
+          pd.concat(map(pd.read_csv, arquivos)).to_csv('data/raw/anuncios.csv', index=False)
+          "
+
+      - name: Treinar
+        run: cd training && python train.py
+
+      - name: Commitar novo modelo
+        run: |
+          git config user.name "retrain-bot"
+          git config user.email "actions@github.com"
+          git add models/model.joblib
+          git diff --cached --quiet || git commit -m "chore: retreino automático do modelo"
+          git push

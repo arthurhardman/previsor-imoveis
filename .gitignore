@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# MLflow local
+mlruns/
+
+# dados coletados (ficam no Blob; localmente só para desenvolvimento)
+data/
+
+# modelo treinado é versionado de propósito (o retrain commita ele)
+!models/model.joblib
+
+# Node
+node_modules/
+dist/
+
+# Azure Functions local
+local.settings.json
+.python_packages/
+
+# IDE / SO
+.DS_Store
+.vscode/
