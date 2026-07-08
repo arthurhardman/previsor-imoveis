@@ -83,9 +83,27 @@ def main(data_path: str) -> None:
         mlflow.log_metrics(metrics)
         print({k: round(v, 4) for k, v in metrics.items()})
 
+        # estatísticas por bairro: a API usa para avisar quando a consulta
+        # está fora do suporte dos dados (extrapolação)
+        stats = (
+            df.groupby("bairro")
+            .agg(
+                n=("preco", "size"),
+                area_p5=("area_m2", lambda s: s.quantile(0.05)),
+                area_p95=("area_m2", lambda s: s.quantile(0.95)),
+                idade_p5=("idade_anos", lambda s: s.quantile(0.05)),
+                idade_p95=("idade_anos", lambda s: s.quantile(0.95)),
+            )
+            .round(0)
+            .astype(int)
+            .to_dict("index")
+        )
+
         out = Path(__file__).parent.parent / "models" / "model.joblib"
         out.parent.mkdir(exist_ok=True)
-        joblib.dump({"pipeline": model, "bairros": bairros_conhecidos}, out)
+        joblib.dump(
+            {"pipeline": model, "bairros": bairros_conhecidos, "bairro_stats": stats}, out
+        )
         mlflow.log_artifact(str(out))
         print(f"Modelo + {len(bairros_conhecidos)} bairros salvos em {out}")
 

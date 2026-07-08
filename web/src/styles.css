@@ -58,6 +58,15 @@ h1 { margin-bottom: 0.25rem; }
 
 .erro { color: #c53030; }
 
+.aviso {
+  background: #fffbeb;
+  border: 1px solid #f6e05e;
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.85rem;
+  color: #744210;
+}
+
 .resultado {
   margin-top: 1.5rem;
   background: #fff;

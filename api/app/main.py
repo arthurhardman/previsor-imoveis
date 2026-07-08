@@ -30,6 +30,7 @@ app.add_middleware(
 
 _pipeline = None
 _bairros: list[str] = []
+_bairro_stats: dict[str, dict] = {}
 _uf_index: dict[str, float] = {}
 
 
@@ -41,21 +42,29 @@ class Imovel(BaseModel):
     idade_anos: int = Field(ge=0, le=120)
 
 
+class BaseBairro(BaseModel):
+    reconhecido: bool
+    n_transacoes: int = 0
+
+
 class Previsao(BaseModel):
     preco_estimado: float
     preco_m2: float
     fatores_pct: dict[str, float]
     ajuste_uf: float
+    avisos: list[str]
+    base_bairro: BaseBairro
     metodologia: str
 
 
 @app.on_event("startup")
 def load_artifacts() -> None:
-    global _pipeline, _bairros, _uf_index
+    global _pipeline, _bairros, _bairro_stats, _uf_index
     model_path = MODELS_DIR / "model.joblib"
     if model_path.exists():
         artefato = joblib.load(model_path)
         _pipeline, _bairros = artefato["pipeline"], artefato["bairros"]
+        _bairro_stats = artefato.get("bairro_stats", {})
     index_path = MODELS_DIR / "uf_index.json"
     if index_path.exists():
         _uf_index = json.loads(index_path.read_text())["multiplicadores"]
@@ -86,9 +95,45 @@ def predict(imovel: Imovel) -> Previsao:
         raise HTTPException(422, f"UF desconhecida: {uf}")
 
     bairro = imovel.bairro.strip().upper()
+    avisos: list[str] = []
+
+    # O microdado é da capital paulista: fora de SP o bairro é desconsiderado
+    # e a estimativa é o nível de preço médio do estado (índice BCB).
+    if uf != "SP":
+        bairro_usado = "OUTRO"
+        reconhecido = False
+        avisos.append(
+            f"As transações usadas no treino são de São Paulo capital. Para {uf}, o bairro é "
+            "desconsiderado e a estimativa reflete o nível de preço médio do estado (índice BCB)."
+        )
+    elif bairro in _bairros:
+        bairro_usado = bairro
+        reconhecido = True
+    else:
+        bairro_usado = "OUTRO"
+        reconhecido = False
+        if bairro:
+            avisos.append(
+                f"O bairro '{bairro}' não tem transações suficientes na base (ITBI-SP); "
+                "usando o comportamento médio da cidade."
+            )
+
+    stats = _bairro_stats.get(bairro_usado) if reconhecido else None
+    if stats:
+        if not (stats["area_p5"] <= imovel.area_m2 <= stats["area_p95"]):
+            avisos.append(
+                f"Extrapolação: 90% das transações de {bairro_usado} têm entre "
+                f"{stats['area_p5']} e {stats['area_p95']} m² (você pediu {imovel.area_m2:g} m²)."
+            )
+        if not (stats["idade_p5"] <= imovel.idade_anos <= stats["idade_p95"]):
+            avisos.append(
+                f"Extrapolação: 90% das transações de {bairro_usado} são de imóveis com "
+                f"{stats['idade_p5']} a {stats['idade_p95']} anos (você pediu {imovel.idade_anos})."
+            )
+
     X = pd.DataFrame(
         [{
-            "bairro": bairro if bairro in _bairros else "OUTRO",
+            "bairro": bairro_usado,
             "tipo": imovel.tipo,
             "area_m2": imovel.area_m2,
             "idade_anos": imovel.idade_anos,
@@ -105,6 +150,11 @@ def predict(imovel: Imovel) -> Previsao:
         preco_m2=round(preco / imovel.area_m2, 2),
         fatores_pct=_explicar(X),
         ajuste_uf=ajuste,
+        avisos=avisos,
+        base_bairro=BaseBairro(
+            reconhecido=reconhecido,
+            n_transacoes=stats["n"] if stats else 0,
+        ),
         metodologia=(
             "Modelo XGBoost treinado em ~100 mil transações reais (ITBI São Paulo 2024-2026), "
             "escalado por UF pela mediana de avaliação de imóveis financiados (Banco Central)."
