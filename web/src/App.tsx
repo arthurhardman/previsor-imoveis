@@ -13,8 +13,9 @@ interface Previsao {
   preco_m2: number
   fatores_pct: Record<string, number>
   ajuste_uf: number
-  avisos: string[]
-  base_bairro: { reconhecido: boolean; n_transacoes: number }
+  // opcionais: durante um deploy, o front pode falar com uma API de versão anterior
+  avisos?: string[]
+  base_bairro?: { reconhecido: boolean; n_transacoes: number }
   metodologia: string
 }
 
@@ -125,10 +126,10 @@ export default function App() {
           <p>
             {brl(resultado.preco_m2)} / m²
             {resultado.ajuste_uf !== 1 && ` · ajuste ${form.uf}: ×${resultado.ajuste_uf.toFixed(2)}`}
-            {resultado.base_bairro.reconhecido &&
+            {resultado.base_bairro?.reconhecido &&
               ` · ${resultado.base_bairro.n_transacoes} transações reais no bairro`}
           </p>
-          {resultado.avisos.map((aviso) => (
+          {(resultado.avisos ?? []).map((aviso) => (
             <p key={aviso} className="aviso">⚠️ {aviso}</p>
           ))}
           <h3>O que pesou na estimativa</h3>
