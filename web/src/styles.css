@@ -1,96 +1,339 @@
+/* ── Previsor de Imóveis · estética de registro/cartório ─────────────
+   Papel creme, tinta verde-escura, serifa editorial (Fraunces),
+   números em mono tabular. O resultado é apresentado como um laudo. */
+
 :root {
-  font-family: system-ui, -apple-system, sans-serif;
-  color: #1a202c;
-  background: #f7fafc;
+  --papel: #f4efe3;
+  --papel-alto: #faf7ee;
+  --tinta: #1e2a23;
+  --tinta-suave: #5c6a5f;
+  --linha: #c9c0a8;
+  --verde: #1f6f4e;
+  --carimbo: #b03a2e;
+  --ambar-fundo: #f7ecd4;
+  --ambar-borda: #d9b96a;
+  --ambar-texto: #6d5420;
+
+  --serif: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --sans: 'Archivo', 'Helvetica Neue', sans-serif;
+  --mono: 'Spline Sans Mono', 'SF Mono', monospace;
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; }
 
-.container {
-  max-width: 640px;
+body {
+  margin: 0;
+  font-family: var(--sans);
+  color: var(--tinta);
+  background:
+    radial-gradient(ellipse at 20% -10%, rgba(31, 111, 78, 0.07), transparent 55%),
+    repeating-linear-gradient(0deg, transparent 0 2px, rgba(30, 42, 35, 0.012) 2px 4px),
+    var(--papel);
+  min-height: 100vh;
+}
+
+.folha {
+  max-width: 660px;
   margin: 0 auto;
-  padding: 2rem 1rem 4rem;
+  padding: 3rem 1.25rem 4rem;
 }
 
-h1 { margin-bottom: 0.25rem; }
-.subtitulo { color: #4a5568; margin-top: 0; }
+/* ── cabeçalho ─────────────────────────────────────────────── */
 
-.formulario {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-top: 1.5rem;
-}
+.cabecalho { position: relative; margin-bottom: 2.5rem; }
 
-.formulario label {
+.selo {
+  position: absolute;
+  top: -0.5rem;
+  right: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.875rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.05rem;
+  width: 92px;
+  height: 92px;
+  border: 2px solid var(--carimbo);
+  border-radius: 50%;
+  color: var(--carimbo);
+  font-family: var(--mono);
+  font-size: 0.7rem;
   font-weight: 600;
+  letter-spacing: 0.08em;
+  transform: rotate(8deg);
+  opacity: 0.75;
+  box-shadow: inset 0 0 0 3px var(--papel), inset 0 0 0 4px var(--carimbo);
+  animation: carimbar 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both 0.4s;
 }
 
-.formulario input,
-.formulario select {
-  padding: 0.5rem 0.65rem;
-  border: 1px solid #cbd5e0;
-  border-radius: 8px;
+@keyframes carimbar {
+  from { transform: rotate(8deg) scale(1.6); opacity: 0; }
+  to   { transform: rotate(8deg) scale(1);   opacity: 0.75; }
+}
+
+.sobrelinha {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--verde);
+  margin: 0 0 0.75rem;
+  animation: surgir 0.6s ease both;
+}
+
+h1 {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: clamp(2.6rem, 8vw, 4rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  margin: 0 0 1.25rem;
+  animation: surgir 0.6s ease both 0.1s;
+}
+
+.lede {
   font-size: 1rem;
+  line-height: 1.65;
+  color: var(--tinta-suave);
+  max-width: 46ch;
+  margin: 0;
+  animation: surgir 0.6s ease both 0.2s;
+}
+.lede strong { color: var(--tinta); }
+
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
 }
 
-.formulario button {
-  grid-column: 1 / -1;
-  padding: 0.75rem;
+/* ── formulário (a "guia") ─────────────────────────────────── */
+
+.guia {
+  background: var(--papel-alto);
+  border: 1px solid var(--linha);
+  outline: 1px solid var(--linha);
+  outline-offset: 4px;
+  padding: 1.75rem;
+  animation: surgir 0.6s ease both 0.3s;
+}
+
+.guia-titulo {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--tinta-suave);
+  border-bottom: 1px solid var(--linha);
+  padding-bottom: 0.6rem;
+  margin: 0 0 1.4rem;
+}
+
+.campos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.3rem 1.5rem;
+}
+
+.campo-largo { grid-column: 1 / -1; }
+
+label { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.rotulo {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.rotulo em {
+  font-style: normal;
+  font-weight: 400;
+  text-transform: none;
+  color: var(--tinta-suave);
+}
+
+input, select {
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  color: var(--tinta);
+  background: transparent;
   border: none;
-  border-radius: 8px;
-  background: #2b6cb0;
-  color: #fff;
-  font-size: 1rem;
+  border-bottom: 1.5px solid var(--linha);
+  border-radius: 0;
+  padding: 0.35rem 0.1rem;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+input:focus, select:focus {
+  outline: none;
+  border-bottom-color: var(--verde);
+}
+input::placeholder { color: #b6ac91; }
+
+.com-unidade { position: relative; display: block; }
+.unidade {
+  position: absolute;
+  right: 0.1rem;
+  bottom: 0.45rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--tinta-suave);
+  pointer-events: none;
+}
+
+button {
+  margin-top: 1.6rem;
+  width: 100%;
+  padding: 0.95rem;
+  font-family: var(--sans);
+  font-size: 0.95rem;
   font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--papel-alto);
+  background: var(--verde);
+  border: none;
   cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.2s;
+  box-shadow: 3px 3px 0 var(--tinta);
 }
-.formulario button:disabled { opacity: 0.6; cursor: wait; }
+button:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--tinta);
+}
+button:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--tinta);
+}
+button:disabled { opacity: 0.65; cursor: wait; }
 
-.erro { color: #c53030; }
-
-.aviso {
-  background: #fffbeb;
-  border: 1px solid #f6e05e;
-  border-radius: 8px;
-  padding: 0.6rem 0.8rem;
-  font-size: 0.85rem;
-  color: #744210;
+.erro {
+  margin-top: 1.25rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--carimbo);
+  background: #f6e3df;
+  color: #7c2d24;
+  font-size: 0.9rem;
 }
 
-.resultado {
-  margin-top: 1.5rem;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1.5rem;
+/* ── resultado (o "laudo") ─────────────────────────────────── */
+
+.laudo {
+  margin-top: 2rem;
+  background: var(--papel-alto);
+  border: 1px solid var(--linha);
+  outline: 1px solid var(--linha);
+  outline-offset: 4px;
+  padding: 1.75rem;
+  animation: surgir 0.45s ease both;
 }
-.resultado h2 { margin: 0; font-size: 2rem; }
-.resultado ul { list-style: none; padding: 0; margin: 0.5rem 0 0; }
-.resultado li {
+
+.laudo-topo {
   display: flex;
   justify-content: space-between;
-  padding: 0.4rem 0;
-  border-bottom: 1px solid #edf2f7;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
-.positivo { color: #2f855a; }
-.negativo { color: #c53030; }
+.laudo-topo .guia-titulo { flex: 1; margin-bottom: 1rem; }
+
+.lastro {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--tinta-suave);
+  margin: 0;
+}
+.lastro strong { color: var(--verde); }
+
+.preco {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: clamp(2.4rem, 9vw, 3.6rem);
+  letter-spacing: -0.02em;
+  margin: 0.5rem 0 0.2rem;
+  color: var(--verde);
+  animation: carimbar-preco 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both 0.1s;
+}
+
+@keyframes carimbar-preco {
+  from { opacity: 0; transform: scale(1.15); }
+  to   { opacity: 1; transform: none; }
+}
+
+.preco-m2 {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  color: var(--tinta-suave);
+  margin: 0 0 1rem;
+}
+.preco-m2 .ajuste { color: var(--carimbo); }
+
+.aviso {
+  background: var(--ambar-fundo);
+  border: 1px solid var(--ambar-borda);
+  border-left-width: 4px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ambar-texto);
+  margin: 0.6rem 0;
+}
+
+.laudo h2 {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--tinta-suave);
+  border-bottom: 1px solid var(--linha);
+  padding-bottom: 0.6rem;
+  margin: 1.75rem 0 0.5rem;
+}
+
+.razao { list-style: none; margin: 0; padding: 0; }
+.razao li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.55rem 0;
+}
+.razao .fator { font-size: 0.92rem; }
+.razao .pontilhado {
+  flex: 1;
+  border-bottom: 1.5px dotted var(--linha);
+  transform: translateY(-3px);
+}
+.razao .efeito {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.positivo { color: var(--verde); }
+.negativo { color: var(--carimbo); }
 
 .metodologia {
-  margin-top: 1rem;
-  font-size: 0.8rem;
-  color: #718096;
+  margin: 1.75rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--linha);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--tinta-suave);
 }
 
+/* ── rodapé ────────────────────────────────────────────────── */
+
+.rodape {
+  margin-top: 2.5rem;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--tinta-suave);
+}
+.rodape a { color: var(--verde); }
+
 @media (max-width: 480px) {
-  .formulario { grid-template-columns: 1fr; }
+  .campos { grid-template-columns: 1fr; }
+  .selo { width: 74px; height: 74px; font-size: 0.6rem; }
 }

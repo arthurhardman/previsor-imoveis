@@ -24,9 +24,9 @@ const brl = (v: number) =>
 
 const ROTULOS: Record<string, string> = {
   bairro: 'Bairro',
-  area_m2: 'Área',
+  area_m2: 'Área construída',
   idade_anos: 'Idade do imóvel',
-  tipo: 'Tipo',
+  tipo: 'Tipo do imóvel',
   ano: 'Ano de referência',
 }
 
@@ -73,79 +73,125 @@ export default function App() {
   }
 
   return (
-    <main className="container">
-      <h1>Previsor de Imóveis</h1>
-      <p className="subtitulo">
-        Treinado em ~100 mil transações reais de compra e venda (ITBI São Paulo) e
-        ajustado por estado com o índice do Banco Central.
-      </p>
+    <main className="folha">
+      <header className="cabecalho">
+        <div className="selo" aria-hidden="true">
+          <span>ITBI-SP</span>
+          <span>+</span>
+          <span>BCB</span>
+        </div>
+        <p className="sobrelinha">Estimativa fundamentada em registros públicos</p>
+        <h1>
+          Previsor de<br />Imóveis
+        </h1>
+        <p className="lede">
+          Preço estimado a partir de <strong>~100 mil transações reais</strong> de compra e
+          venda (ITBI São Paulo, 2024–2026), ajustado por estado com o índice de avaliação
+          do Banco Central. Sem anúncio inflado: valor de guia paga.
+        </p>
+      </header>
 
-      <form onSubmit={prever} className="formulario">
-        <label>
-          Estado (UF)
-          <select value={form.uf} onChange={(e) => set('uf', e.target.value)}>
-            {UFS.map((u) => <option key={u}>{u}</option>)}
-          </select>
-        </label>
-        <label>
-          Tipo
-          <select value={form.tipo} onChange={(e) => set('tipo', e.target.value)}>
-            <option value="apartamento">apartamento</option>
-            <option value="casa">casa</option>
-          </select>
-        </label>
-        <label>
-          Bairro
-          <input list="bairros" value={form.bairro} placeholder="ex.: MOEMA"
-            onChange={(e) => set('bairro', e.target.value)} />
-          <datalist id="bairros">
-            {bairros.map((b) => <option key={b} value={b} />)}
-          </datalist>
-        </label>
-        <label>
-          Área (m²)
-          <input type="number" min={15} max={1000} value={form.area_m2}
-            onChange={(e) => set('area_m2', Number(e.target.value))} />
-        </label>
-        <label>
-          Idade do imóvel (anos)
-          <input type="number" min={0} max={120} value={form.idade_anos}
-            onChange={(e) => set('idade_anos', Number(e.target.value))} />
-        </label>
+      <form onSubmit={prever} className="guia" aria-label="Dados do imóvel">
+        <p className="guia-titulo">Declaração do imóvel</p>
+
+        <div className="campos">
+          <label>
+            <span className="rotulo">Estado</span>
+            <select value={form.uf} onChange={(e) => set('uf', e.target.value)}>
+              {UFS.map((u) => <option key={u}>{u}</option>)}
+            </select>
+          </label>
+          <label>
+            <span className="rotulo">Tipo</span>
+            <select value={form.tipo} onChange={(e) => set('tipo', e.target.value)}>
+              <option value="apartamento">Apartamento</option>
+              <option value="casa">Casa</option>
+            </select>
+          </label>
+          <label className="campo-largo">
+            <span className="rotulo">Bairro <em>(referência: São Paulo capital)</em></span>
+            <input list="bairros" value={form.bairro} placeholder="MOEMA"
+              onChange={(e) => set('bairro', e.target.value)} />
+            <datalist id="bairros">
+              {bairros.map((b) => <option key={b} value={b} />)}
+            </datalist>
+          </label>
+          <label>
+            <span className="rotulo">Área construída</span>
+            <span className="com-unidade">
+              <input type="number" min={15} max={1000} value={form.area_m2}
+                onChange={(e) => set('area_m2', Number(e.target.value))} />
+              <span className="unidade">m²</span>
+            </span>
+          </label>
+          <label>
+            <span className="rotulo">Idade do imóvel</span>
+            <span className="com-unidade">
+              <input type="number" min={0} max={120} value={form.idade_anos}
+                onChange={(e) => set('idade_anos', Number(e.target.value))} />
+              <span className="unidade">anos</span>
+            </span>
+          </label>
+        </div>
 
         <button type="submit" disabled={carregando}>
-          {carregando ? 'Calculando…' : 'Estimar preço'}
+          {carregando ? 'Consultando registros…' : 'Estimar preço'}
         </button>
       </form>
 
-      {erro && <p className="erro">Erro: {erro}. A API pode estar em cold start — tente de novo em alguns segundos.</p>}
+      {erro && (
+        <p className="erro" role="alert">
+          {erro}. A API hiberna quando ociosa (custo zero) — tente novamente em alguns segundos.
+        </p>
+      )}
 
       {resultado && (
-        <section className="resultado">
-          <h2>{brl(resultado.preco_estimado)}</h2>
-          <p>
-            {brl(resultado.preco_m2)} / m²
-            {resultado.ajuste_uf !== 1 && ` · ajuste ${form.uf}: ×${resultado.ajuste_uf.toFixed(2)}`}
-            {resultado.base_bairro?.reconhecido &&
-              ` · ${resultado.base_bairro.n_transacoes} transações reais no bairro`}
+        <section className="laudo" aria-label="Resultado da estimativa">
+          <div className="laudo-topo">
+            <p className="guia-titulo">Valor estimado</p>
+            {resultado.base_bairro?.reconhecido && (
+              <p className="lastro">
+                lastreado em <strong>{resultado.base_bairro.n_transacoes}</strong> transações
+                do bairro
+              </p>
+            )}
+          </div>
+
+          <p className="preco">{brl(resultado.preco_estimado)}</p>
+          <p className="preco-m2">
+            {brl(resultado.preco_m2)}<span> / m²</span>
+            {resultado.ajuste_uf !== 1 && (
+              <span className="ajuste"> · ajuste {form.uf} ×{resultado.ajuste_uf.toFixed(2)}</span>
+            )}
           </p>
+
           {(resultado.avisos ?? []).map((aviso) => (
-            <p key={aviso} className="aviso">⚠️ {aviso}</p>
+            <p key={aviso} className="aviso">{aviso}</p>
           ))}
-          <h3>O que pesou na estimativa</h3>
-          <ul>
+
+          <h2>Composição da estimativa</h2>
+          <ul className="razao">
             {Object.entries(resultado.fatores_pct).slice(0, 5).map(([fator, pct]) => (
               <li key={fator}>
-                <span>{ROTULOS[fator] ?? fator}</span>
-                <span className={pct >= 0 ? 'positivo' : 'negativo'}>
-                  {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
+                <span className="fator">{ROTULOS[fator] ?? fator}</span>
+                <span className="pontilhado" aria-hidden="true" />
+                <span className={`efeito ${pct >= 0 ? 'positivo' : 'negativo'}`}>
+                  {pct >= 0 ? '+' : '−'}{Math.abs(pct).toFixed(1)}%
                 </span>
               </li>
             ))}
           </ul>
+
           <p className="metodologia">{resultado.metodologia}</p>
         </section>
       )}
+
+      <footer className="rodape">
+        <p>
+          Projeto de portfólio — pipeline completo de ML na Azure ·{' '}
+          <a href="https://github.com/arthurhardman/previsor-imoveis">código no GitHub</a>
+        </p>
+      </footer>
     </main>
   )
 }
