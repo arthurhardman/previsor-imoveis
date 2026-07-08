@@ -2,7 +2,10 @@
 
 Projeto de portfólio de Machine Learning **de ponta a ponta**: coleta de dados → treino → deploy na nuvem → API com explicabilidade → front interativo → retreino automático.
 
-**Demo:** _(URL do Static Web App após o deploy)_
+**Demo:** https://polite-field-004e2630f.7.azurestaticapps.net
+**API:** https://previmoveis-api.ambitiouspond-daff3a18.brazilsouth.azurecontainerapps.io/docs
+
+> A primeira requisição pode levar alguns segundos: a API roda com scale-to-zero e "acorda" sob demanda — decisão deliberada para custo zero.
 
 ## Arquitetura
 
@@ -70,8 +73,13 @@ docker push ghcr.io/<seu-user>/previsor-imoveis-api:latest
 az deployment group create -g previsor-imoveis -f infra/main.bicep \
   -p ghcrImage=ghcr.io/<seu-user>/previsor-imoveis-api:latest
 
-# 4. Scraper
-cd scraper && func azure functionapp publish previmoveis-scraper
+# 4. Scraper (Consumption em eastus — a cota de VMs em brazilsouth era 0 nesta assinatura)
+az functionapp create -n previmoveis-scraper -g previsor-imoveis \
+  --consumption-plan-location eastus --runtime python --runtime-version 3.12 \
+  --functions-version 4 --os-type Linux --storage-account <storage-do-bicep>
+cd scraper && zip -r scraper.zip function_app.py sample_source.py requirements.txt host.json
+az functionapp deployment source config-zip -n previmoveis-scraper -g previsor-imoveis \
+  --src scraper.zip --build-remote true
 
 # 5. Budget alert (rede de segurança de custo!)
 az consumption budget create --budget-name limite-projeto --amount 20 \

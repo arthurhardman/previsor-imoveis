@@ -10,7 +10,7 @@ param baseName string = 'previmoveis'
 param ghcrImage string
 
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
-  name: '${baseName}st${uniqueString(resourceGroup().id)}'
+  name: take('${baseName}st${uniqueString(resourceGroup().id)}', 24)
   location: location
   sku: { name: 'Standard_LRS' }
   kind: 'StorageV2'
