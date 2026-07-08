@@ -76,6 +76,12 @@ h1 { margin-bottom: 0.25rem; }
 .positivo { color: #2f855a; }
 .negativo { color: #c53030; }
 
+.metodologia {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: #718096;
+}
+
 @media (max-width: 480px) {
   .formulario { grid-template-columns: 1fr; }
 }

@@ -1,11 +1,12 @@
-# Retreino semanal: baixa os CSVs coletados do Blob, treina, commita o novo modelo.
-# O commit em models/ dispara o deploy-api.yml automaticamente (retreino -> deploy).
-# Secrets necessários: AZURE_CREDENTIALS, STORAGE_ACCOUNT (nome da storage account)
+# Retreino mensal com dados reais: baixa os xlsx do ITBI coletados no Blob,
+# roda a ingestão, atualiza o índice do BCB e treina. O commit em models/
+# dispara o deploy-api.yml automaticamente (retreino -> deploy).
+# Secrets necessários: AZURE_CREDENTIALS, STORAGE_ACCOUNT
 name: retrain
 
 on:
   schedule:
-    - cron: "0 8 * * 1" # segundas 08:00 UTC, depois da coleta das 06:00
+    - cron: "0 8 6 * *" # dia 6 de cada mês, 08:00 UTC (coleta roda dia 5)
   workflow_dispatch:
 
 jobs:
@@ -20,34 +21,34 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: pip install -r training/requirements.txt
+      - run: pip install -r training/requirements.txt openpyxl
 
       - uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Baixar dados coletados
+      - name: Baixar planilhas ITBI do Blob
         run: |
-          mkdir -p data/raw
+          mkdir -p data/itbi
           az storage blob download-batch \
             --account-name ${{ secrets.STORAGE_ACCOUNT }} \
-            --source dados --pattern "raw/*.csv" \
+            --source dados --pattern "itbi/*.xlsx" \
             --destination data/ --auth-mode login
-          # Consolida todos os lotes num CSV único
-          python -c "
-          import pandas as pd, glob
-          arquivos = glob.glob('data/raw/*.csv')
-          assert arquivos, 'nenhum dado coletado ainda'
-          pd.concat(map(pd.read_csv, arquivos)).to_csv('data/raw/anuncios.csv', index=False)
-          "
+          ls -la data/itbi/
+
+      - name: Ingestão ITBI + índice BCB
+        run: |
+          cd training
+          python ingest_itbi.py
+          python ingest_bcb.py
 
       - name: Treinar
         run: cd training && python train.py
 
-      - name: Commitar novo modelo
+      - name: Commitar novo modelo e índice
         run: |
           git config user.name "retrain-bot"
           git config user.email "actions@github.com"
-          git add models/model.joblib
-          git diff --cached --quiet || git commit -m "chore: retreino automático do modelo"
+          git add models/model.joblib models/uf_index.json
+          git diff --cached --quiet || git commit -m "chore: retreino mensal (ITBI-SP + índice BCB)"
           git push

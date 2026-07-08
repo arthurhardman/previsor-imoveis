@@ -1,6 +1,6 @@
 # Previsor de Imóveis 🏠
 
-Projeto de portfólio de Machine Learning **de ponta a ponta**: coleta de dados → treino → deploy na nuvem → API com explicabilidade → front interativo → retreino automático.
+Projeto de portfólio de Machine Learning **de ponta a ponta com dados reais**: ~100 mil transações imobiliárias de compra e venda (ITBI-SP) + índice nacional do Banco Central → treino → deploy na nuvem → API com explicabilidade → front interativo → retreino automático mensal.
 
 **Demo:** https://polite-field-004e2630f.7.azurestaticapps.net
 **API:** https://previmoveis-api.ambitiouspond-daff3a18.brazilsouth.azurecontainerapps.io/docs
@@ -94,13 +94,22 @@ az staticwebapp create -n previmoveis-web -g previsor-imoveis \
 
 Secrets do GitHub Actions: `AZURE_CREDENTIALS` (`az ad sp create-for-rbac --sdk-auth --role contributor --scopes /subscriptions/<sub>/resourceGroups/previsor-imoveis`) e `STORAGE_ACCOUNT` (output do deploy do Bicep).
 
-## Dados
+## Dados e metodologia
 
-Enquanto o scraper usa a fonte sintética (`scraper/sample_source.py`), o pipeline roda de ponta a ponta com dados gerados. Para dados reais, substitua `_coletar()` em `scraper/function_app.py` — **respeitando robots.txt e termos de uso da fonte** (alternativas: APIs públicas, dados abertos de ITBI da prefeitura).
+Duas fontes **oficiais e abertas**:
+
+1. **[ITBI-SP](https://prefeitura.sp.gov.br/web/fazenda/w/acesso_a_informacao/31501)** — cada linha é uma transação de compra e venda efetivamente paga em São Paulo (preço real, não anúncio). 2024–2026, ~540 mil guias → ~100 mil transações residenciais após limpeza (`training/ingest_itbi.py`): só compra e venda, transmissão de 100%, uso residencial, outliers de preço/m² removidos (P1/P99).
+2. **[BCB Mercado Imobiliário](https://dadosabertos.bcb.gov.br/dataset/informacoes-do-mercado-imobiliario)** — mediana do valor de avaliação de imóveis financiados por UF (`training/ingest_bcb.py`). Gera o multiplicador que escala a previsão (treinada em SP) para qualquer estado.
+
+**Limitações assumidas** (e documentadas de propósito — dado real tem ruído):
+- O microdado é da capital paulista; a extrapolação por UF usa um índice agregado — a previsão para outros estados é uma aproximação de nível de preço, não captura bairros locais.
+- Valores de ITBI são declarados e tendem a ficar abaixo do preço de anúncio.
+- Métricas atuais: **R² 0.68, erro mediano ~20%** — sem nº de quartos/vagas/estado de conservação (o ITBI não tem), esse é o teto natural do dado.
 
 ## Roadmap
 
-- [ ] Fonte de dados real (dados abertos de ITBI / API pública)
-- [ ] Monitoramento de drift (comparar distribuição das previsões semana a semana no App Insights)
+- [ ] Monitoramento de drift (comparar distribuição das previsões mês a mês no App Insights)
+- [ ] Enriquecer features com a Tabela de PADRÕES do IPTU (padrão construtivo)
+- [ ] Incluir ITBI de outras capitais que publicam microdados (Rio, Niterói)
 - [ ] Comparação de modelos no MLflow (XGBoost vs LightGBM vs linear)
 - [ ] Posts no LinkedIn documentando cada etapa

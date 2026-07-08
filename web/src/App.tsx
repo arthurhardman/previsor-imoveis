@@ -1,33 +1,51 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 // Em produção (Static Web Apps), defina VITE_API_URL apontando para o Container App
 const API = import.meta.env.VITE_API_URL ?? '/api'
 
-const BAIRROS = ['Centro', 'Jardins', 'Vila Nova', 'Boa Vista', 'Industrial', 'Beira Rio']
-const TIPOS = ['apartamento', 'casa', 'kitnet', 'cobertura']
+const UFS = [
+  'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT',
+  'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO',
+]
 
 interface Previsao {
   preco_estimado: number
   preco_m2: number
-  fatores: Record<string, number>
+  fatores_pct: Record<string, number>
+  ajuste_uf: number
+  metodologia: string
 }
 
 const brl = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 
+const ROTULOS: Record<string, string> = {
+  bairro: 'Bairro',
+  area_m2: 'Área',
+  idade_anos: 'Idade do imóvel',
+  tipo: 'Tipo',
+  ano: 'Ano de referência',
+}
+
 export default function App() {
   const [form, setForm] = useState({
-    bairro: 'Centro',
+    uf: 'SP',
+    bairro: '',
     tipo: 'apartamento',
     area_m2: 70,
-    quartos: 2,
-    banheiros: 1,
-    vagas: 1,
     idade_anos: 10,
   })
+  const [bairros, setBairros] = useState<string[]>([])
   const [resultado, setResultado] = useState<Previsao | null>(null)
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch(`${API}/bairros`)
+      .then((r) => r.json())
+      .then(setBairros)
+      .catch(() => {}) // autocomplete é opcional; API pode estar em cold start
+  }, [])
 
   const set = (campo: string, valor: string | number) =>
     setForm((f) => ({ ...f, [campo]: valor }))
@@ -55,21 +73,31 @@ export default function App() {
     <main className="container">
       <h1>Previsor de Imóveis</h1>
       <p className="subtitulo">
-        Modelo XGBoost servido em Azure Container Apps — estimativa de preço com explicação dos fatores.
+        Treinado em ~100 mil transações reais de compra e venda (ITBI São Paulo) e
+        ajustado por estado com o índice do Banco Central.
       </p>
 
       <form onSubmit={prever} className="formulario">
         <label>
-          Bairro
-          <select value={form.bairro} onChange={(e) => set('bairro', e.target.value)}>
-            {BAIRROS.map((b) => <option key={b}>{b}</option>)}
+          Estado (UF)
+          <select value={form.uf} onChange={(e) => set('uf', e.target.value)}>
+            {UFS.map((u) => <option key={u}>{u}</option>)}
           </select>
         </label>
         <label>
           Tipo
           <select value={form.tipo} onChange={(e) => set('tipo', e.target.value)}>
-            {TIPOS.map((t) => <option key={t}>{t}</option>)}
+            <option value="apartamento">apartamento</option>
+            <option value="casa">casa</option>
           </select>
+        </label>
+        <label>
+          Bairro
+          <input list="bairros" value={form.bairro} placeholder="ex.: MOEMA"
+            onChange={(e) => set('bairro', e.target.value)} />
+          <datalist id="bairros">
+            {bairros.map((b) => <option key={b} value={b} />)}
+          </datalist>
         </label>
         <label>
           Área (m²)
@@ -77,23 +105,8 @@ export default function App() {
             onChange={(e) => set('area_m2', Number(e.target.value))} />
         </label>
         <label>
-          Quartos
-          <input type="number" min={1} max={8} value={form.quartos}
-            onChange={(e) => set('quartos', Number(e.target.value))} />
-        </label>
-        <label>
-          Banheiros
-          <input type="number" min={1} max={8} value={form.banheiros}
-            onChange={(e) => set('banheiros', Number(e.target.value))} />
-        </label>
-        <label>
-          Vagas
-          <input type="number" min={0} max={6} value={form.vagas}
-            onChange={(e) => set('vagas', Number(e.target.value))} />
-        </label>
-        <label>
           Idade do imóvel (anos)
-          <input type="number" min={0} max={80} value={form.idade_anos}
+          <input type="number" min={0} max={120} value={form.idade_anos}
             onChange={(e) => set('idade_anos', Number(e.target.value))} />
         </label>
 
@@ -107,18 +120,22 @@ export default function App() {
       {resultado && (
         <section className="resultado">
           <h2>{brl(resultado.preco_estimado)}</h2>
-          <p>{brl(resultado.preco_m2)} / m²</p>
-          <h3>O que puxou o preço</h3>
+          <p>
+            {brl(resultado.preco_m2)} / m²
+            {resultado.ajuste_uf !== 1 && ` · ajuste ${form.uf}: ×${resultado.ajuste_uf.toFixed(2)}`}
+          </p>
+          <h3>O que pesou na estimativa</h3>
           <ul>
-            {Object.entries(resultado.fatores).slice(0, 5).map(([fator, valor]) => (
+            {Object.entries(resultado.fatores_pct).slice(0, 5).map(([fator, pct]) => (
               <li key={fator}>
-                <span>{fator}</span>
-                <span className={valor >= 0 ? 'positivo' : 'negativo'}>
-                  {valor >= 0 ? '+' : ''}{brl(valor)}
+                <span>{ROTULOS[fator] ?? fator}</span>
+                <span className={pct >= 0 ? 'positivo' : 'negativo'}>
+                  {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
                 </span>
               </li>
             ))}
           </ul>
+          <p className="metodologia">{resultado.metodologia}</p>
         </section>
       )}
     </main>
